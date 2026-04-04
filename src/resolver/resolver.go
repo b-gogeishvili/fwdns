@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"log"
 	"time"
 
 	"github.com/miekg/dns"
@@ -46,3 +45,4 @@ func errorReply(req *dns.Msg) *dns.Msg {
 	m.SetRcode(req, dns.RcodeServerFailure)
 	return m
 }
+
