@@ -11,9 +11,9 @@ func SplitUpstreams(servers string) []string {
 		if addr == "" {
 			continue
 		}
-		// if !strings.Contains(addr, ":") {
-		//     addr += ":53"
-		// }
+		if !strings.Contains(addr, ":") {
+			addr += ":53"
+		}
 		res = append(res, addr)
 	}
 	return res
