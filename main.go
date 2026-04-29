@@ -3,23 +3,24 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
-    "os"
-    "os/signal"
-    "syscall"
 
 	"github.com/miekg/dns"
 
-	"fwdns/src/tools"
+	"fwdns/src/cache"
 	"fwdns/src/resolver"
+	"fwdns/src/tools"
 )
 
 func main() {
 	dnsAddr := flag.String("dns", ":5300", "port to serve DNS on")
 	upstream := flag.String("upstream", "9.9.9.9,1.1.1.1", "upstream dns servers, separated by comma")
 	timeout := flag.Duration("timeout", 10*time.Second, "how long to wait for an upstream server (seconds)")
-	// cleanup := flag.Duration("cleanup", time.Second, "how often to clean expired cache entries (seconds)")
+	cleanup := flag.Duration("cleanup", 60*time.Second, "how often to clean expired cache entries (seconds)")
 	flag.Parse()
 
 	upstreamServers := tools.SplitUpstreams(*upstream)
@@ -28,11 +29,13 @@ func main() {
 		log.Fatal("At least one upstream server is required")
 	}
 
-	res := resolver.New(upstreamServers, *timeout)
+	c := cache.New()
+	res := resolver.New(c, upstreamServers, *timeout)
 
-	log.Println(timeout)
+	stopCleanup := c.StartCleanup(*cleanup)
+	defer stopCleanup()
 
-	dnsServer := &dns.Server{ Addr: *dnsAddr, Net: "udp", Handler: res }
+	dnsServer := &dns.Server{Addr: *dnsAddr, Net: "udp", Handler: res}
 	go func() {
 		log.Printf("DNS server is listening on %s (UDP); upstream servers: %s",
 			*dnsAddr, strings.Join(upstreamServers, ", "))
@@ -49,4 +52,3 @@ func main() {
 	log.Println("Shutting down...")
 	_ = dnsServer.Shutdown()
 }
-
