@@ -13,6 +13,7 @@ import (
 
 	"fwdns/src/cache"
 	"fwdns/src/resolver"
+	"fwdns/src/stats"
 	"fwdns/src/tools"
 )
 
@@ -30,7 +31,8 @@ func main() {
 	}
 
 	c := cache.New()
-	res := resolver.New(c, upstreamServers, *timeout)
+	s := stats.New(100)
+	res := resolver.New(c, s, upstreamServers, *timeout)
 
 	stopCleanup := c.StartCleanup(*cleanup)
 	defer stopCleanup()
@@ -49,6 +51,6 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-	log.Println("Shutting down...")
+	log.Println("DNS Server is shutting down...")
 	_ = dnsServer.Shutdown()
 }

@@ -60,7 +60,7 @@ func rewriteTTL(records []dns.RR, ttl uint32) {
 }
 
 func (c *Cache) Set(key string, msg *dns.Msg) {
-	ttl := minTTL(msg)
+	ttl := MinTTL(msg)
 	if ttl == 0 {
 		return
 	}
@@ -72,7 +72,7 @@ func (c *Cache) Set(key string, msg *dns.Msg) {
 	c.mu.Unlock()
 }
 
-func minTTL(msg *dns.Msg) uint32 {
+func MinTTL(msg *dns.Msg) uint32 {
 	var min uint32
 	first := true
 	for _, rr := range msg.Answer {

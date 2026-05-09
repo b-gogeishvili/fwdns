@@ -18,4 +18,3 @@ func SplitUpstreams(servers string) []string {
 	}
 	return res
 }
-
