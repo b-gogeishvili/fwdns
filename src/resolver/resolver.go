@@ -69,15 +69,20 @@ func (r *Resolver) forward(req *dns.Msg) (*dns.Msg, error) {
 
 func (r *Resolver) record(q dns.Question, cached, isErr bool, ttl uint32, start time.Time) {
 	qtype := dns.TypeToString[q.Qtype]
-	latency := float64(time.Since(start).Microseconds()) / 1000.0
+	latencyMs := float64(time.Since(start).Microseconds()) / 1000.0
 
-	if isErr == true {
-		log.Printf("lookup |   %s   |   %s   |   ttl=%d   |   %fs  |  failed", q.Name, qtype, ttl, latency)
-	} else if cached == false {
-		log.Printf("lookup |   %s   |   %s   |   ttl=%d   |   %fs  |  cache miss", q.Name, qtype, ttl, latency)
-	} else {
-		log.Printf("lookup |   %s   |   %s   |   ttl=%d   |   %fs  |  cache hit", q.Name, qtype, ttl, latency)
+	var status string
+	switch {
+	case isErr:
+		status = "FAIL"
+	case cached:
+		status = "HIT"
+	default:
+		status = "MISS"
 	}
+
+	log.Printf("lookup  %-4s  %-32s  %-6s  ttl=%-6d  latency=%7.2fms",
+		status, q.Name, qtype, ttl, latencyMs)
 
 	r.stats.Record(stats.Query{
 		Time:    time.Now(),
@@ -85,7 +90,7 @@ func (r *Resolver) record(q dns.Question, cached, isErr bool, ttl uint32, start 
 		Type:    qtype,
 		Cached:  cached,
 		TTL:     ttl,
-		Latency: latency,
+		Latency: latencyMs,
 	}, isErr)
 }
 
