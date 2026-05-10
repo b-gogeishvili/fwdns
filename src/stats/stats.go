@@ -11,7 +11,7 @@ type Query struct {
 	Name    string    `json:"name"`
 	Type    string    `json:"type"`
 	Cached  bool      `json:"cached"`
-	TTL     uint32    `json:"ttl"`
+	TTL     int       `json:"ttl"`
 	Latency float64   `json:"latency"`
 }
 

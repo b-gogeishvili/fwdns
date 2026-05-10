@@ -2,6 +2,8 @@ package tools
 
 import (
 	"strings"
+
+	"github.com/miekg/dns"
 )
 
 func SplitUpstreams(servers string) []string {
@@ -17,4 +19,11 @@ func SplitUpstreams(servers string) []string {
 		res = append(res, addr)
 	}
 	return res
+}
+
+// ErrorReply builds a SERVFAIL response for the given request.
+func ErrorReply(req *dns.Msg) *dns.Msg {
+	m := new(dns.Msg)
+	m.SetRcode(req, dns.RcodeServerFailure)
+	return m
 }

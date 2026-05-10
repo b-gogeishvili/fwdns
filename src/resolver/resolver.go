@@ -8,6 +8,15 @@ import (
 
 	"fwdns/src/cache"
 	"fwdns/src/stats"
+	"fwdns/src/tools"
+)
+
+type lookupStatus string
+
+const (
+	statusHit  lookupStatus = "HIT"
+	statusMiss lookupStatus = "MISS"
+	statusFail lookupStatus = "FAIL"
 )
 
 type Resolver struct {
@@ -30,7 +39,7 @@ func (r *Resolver) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	start := time.Now()
 
 	if len(req.Question) == 0 {
-		_ = w.WriteMsg(errorReply(req))
+		_ = w.WriteMsg(tools.ErrorReply(req))
 		return
 	}
 	q := req.Question[0]
@@ -39,18 +48,23 @@ func (r *Resolver) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	if resp, ok := r.cache.Get(key); ok {
 		resp.Id = req.Id
 		resp.Question = req.Question
-		r.record(q, true, false, cache.MinTTL(resp), start)
+		r.record(q, statusHit, int(cache.MinTTL(resp)), start)
 		_ = w.WriteMsg(resp)
 		return
 	}
 	resp, err := r.forward(req)
 	if err != nil || resp == nil {
-		r.record(q, false, true, 0, start)
-		_ = w.WriteMsg(errorReply(req))
+		r.record(q, statusFail, -1, start)
+		_ = w.WriteMsg(tools.ErrorReply(req))
+		return
+	}
+	if resp.Rcode != dns.RcodeSuccess {
+		r.record(q, statusFail, -1, start)
+		_ = w.WriteMsg(resp)
 		return
 	}
 	r.cache.Set(key, resp)
-	r.record(q, false, false, cache.MinTTL(resp), start)
+	r.record(q, statusMiss, int(cache.MinTTL(resp)), start)
 	_ = w.WriteMsg(resp)
 }
 
@@ -67,19 +81,9 @@ func (r *Resolver) forward(req *dns.Msg) (*dns.Msg, error) {
 	return nil, lastErr
 }
 
-func (r *Resolver) record(q dns.Question, cached, isErr bool, ttl uint32, start time.Time) {
+func (r *Resolver) record(q dns.Question, status lookupStatus, ttl int, start time.Time) {
 	qtype := dns.TypeToString[q.Qtype]
 	latencyMs := float64(time.Since(start).Microseconds()) / 1000.0
-
-	var status string
-	switch {
-	case isErr:
-		status = "FAIL"
-	case cached:
-		status = "HIT"
-	default:
-		status = "MISS"
-	}
 
 	log.Printf("lookup  %-4s  %-32s  %-6s  ttl=%-6d  latency=%7.2fms",
 		status, q.Name, qtype, ttl, latencyMs)
@@ -88,14 +92,8 @@ func (r *Resolver) record(q dns.Question, cached, isErr bool, ttl uint32, start 
 		Time:    time.Now(),
 		Name:    q.Name,
 		Type:    qtype,
-		Cached:  cached,
+		Cached:  status == statusHit,
 		TTL:     ttl,
 		Latency: latencyMs,
-	}, isErr)
-}
-
-func errorReply(req *dns.Msg) *dns.Msg {
-	m := new(dns.Msg)
-	m.SetRcode(req, dns.RcodeServerFailure)
-	return m
+	}, status == statusFail)
 }
