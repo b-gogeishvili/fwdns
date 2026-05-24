@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>fwdns</title>
+    </head>
+    <body>
+        <h1>fwdns</h1>
+        <p class="sub">DNS Forwarder and Cache server</p>
+
+        <div class="cards">
+            <div class="card">
+                <div class="label">Total queries</div>
+                <div class="value" id="total">0</div>
+            </div>
+            <div class="card">
+                <div class="label">Cache hits</div>
+                <div class="value" id="hits">0</div>
+            </div>
+            <div class="card">
+                <div class="label">Cache misses</div>
+                <div class="value" id="misses">0</div>
+            </div>
+            <div class="card">
+                <div class="label">Errors</div>
+                <div class="value" id="errors">0</div>
+            </div>
+            <div class="card">
+                <div class="label">Cached entries</div>
+                <div class="value" id="cacheSize">0</div>
+            </div>
+            <div class="card">
+                <div class="label">Hit rate</div>
+                <div class="value" id="hitRate">0%</div>
+            </div>
+        </div>
+
+        <script src="app.js"></script>
+    </body>
+</html>

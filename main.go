@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/miekg/dns"
 
 	"fwdns/src/cache"
+	"fwdns/src/dashboard"
 	"fwdns/src/resolver"
 	"fwdns/src/stats"
 	"fwdns/src/tools"
@@ -19,6 +21,7 @@ import (
 
 func main() {
 	dnsAddr := flag.String("dns", ":5300", "port to serve DNS on")
+	httpAddr := flag.String("http", ":8080", "port to serve HTTP on")
 	upstream := flag.String("upstream", "9.9.9.9,1.1.1.1", "upstream dns servers, separated by comma")
 	timeout := flag.Duration("timeout", 10*time.Second, "how long to wait for an upstream server (seconds)")
 	cleanup := flag.Duration("cleanup", 60*time.Second, "how often to clean expired cache entries (seconds)")
@@ -45,6 +48,14 @@ func main() {
 
 		if err != nil {
 			log.Fatalf("DNS server failed: %v", err)
+		}
+	}()
+
+	webServer := &http.Server{Addr: *httpAddr, Handler: dashboard.New(s, c).Handler()}
+	go func() {
+		log.Printf("Web dashboard on http://localhost%s", *httpAddr)
+		if err := webServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("web server failed: %v", err)
 		}
 	}()
 
