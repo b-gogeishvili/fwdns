@@ -1,0 +1,93 @@
+:root {
+    --bg: #2e3440;
+    --card: #1e293b;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --hit: #22c55e;
+    --miss: #f59e0b;
+    --err: #ef4444;
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+}
+h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+}
+p.sub {
+    margin: 0 0 20px;
+    color: var(--muted);
+}
+.cards {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+.card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 16px;
+}
+.card .label {
+    color: var(--muted);
+    font-size: 13px;
+}
+.card .value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+.bar {
+    height: 6px;
+    border-radius: 999px;
+    background: #334155;
+    overflow: hidden;
+    margin-top: 12px;
+}
+.bar > span {
+    display: block;
+    height: 100%;
+    background: var(--hit);
+    width: 0%;
+    transition: width 0.3s;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    font-size: 14px;
+}
+th,
+td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #334155;
+}
+th {
+    color: var(--muted);
+    font-weight: 600;
+}
+.tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.tag.hit {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--hit);
+}
+.tag.miss {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--miss);
+}
+td.num {
+    font-variant-numeric: tabular-nums;
+}

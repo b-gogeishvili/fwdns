@@ -1,22 +1,48 @@
+const escapes = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => escapes[c]);
+
+const set = (id, value) => (document.getElementById(id).textContent = value);
+
 async function refresh() {
   let data;
   try {
-    const res = await fetch("/api/stats");
-    data = await res.json();
+    data = await (await fetch("/api/stats")).json();
   } catch (e) {
     return;
   }
 
-  console.log(data);
+  set("total", data.total);
+  set("hits", data.hits);
+  set("misses", data.misses);
+  set("errors", data.errors);
+  set("cacheSize", data.cacheSize);
+  set("hitRate", data.hitRate.toFixed(1) + "%");
+  document.getElementById("hitBar").style.width = data.hitRate + "%";
 
-  document.getElementById("total").textContent = data.total;
-  document.getElementById("hits").textContent = data.hits;
-  document.getElementById("misses").textContent = data.misses;
-  document.getElementById("errors").textContent = data.errors;
-  document.getElementById("cacheSize").textContent = data.cacheSize;
-  document.getElementById("hitRate").textContent =
-    data.hitRate.toFixed(1) + "%";
+  document.getElementById("recent").innerHTML = (data.recent || [])
+    .slice()
+    .reverse()
+    .map((q) => {
+      const time = new Date(q.time).toLocaleTimeString();
+      const tag = q.cached
+        ? '<span class="tag hit">CACHE</span>'
+        : '<span class="tag miss">UPSTREAM</span>';
+      return `<tr>
+      <td>${time}</td>
+      <td>${escapeHtml(q.name)}</td>
+      <td>${q.type}</td>
+      <td>${tag}</td>
+      <td class="num">${q.latency.toFixed(2)} ms</td>
+    </tr>`;
+    })
+    .join("");
 }
 
 refresh();
-setInterval(refresh, 1000);
+setInterval(refresh, 500);
