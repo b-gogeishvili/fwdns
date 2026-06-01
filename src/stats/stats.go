@@ -1,3 +1,4 @@
+// keeps track of requests and stores recent queries
 package stats
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// handled DNS request
 type Query struct {
 	Time    time.Time `json:"time"`
 	Name    string    `json:"name"`
@@ -14,6 +16,7 @@ type Query struct {
 	Latency float64   `json:"latency"`
 }
 
+// holds aggregated results and history of dns queries
 type Stats struct {
 	mu      sync.Mutex
 	total   uint64
@@ -24,6 +27,7 @@ type Stats struct {
 	maxKeep int
 }
 
+// constructor for stats
 func New(maxRecent int) *Stats {
 	return &Stats{
 		recent:  make([]Query, 0, maxRecent),
@@ -31,6 +35,7 @@ func New(maxRecent int) *Stats {
 	}
 }
 
+// record each query for live monitoring
 func (s *Stats) Record(q Query, isError bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -45,12 +50,14 @@ func (s *Stats) Record(q Query, isError bool) {
 		s.misses++
 	}
 
+	// append to the history and drop the oldest entry if limit reached
 	s.recent = append(s.recent, q)
 	if len(s.recent) > s.maxKeep {
 		s.recent = s.recent[1:]
 	}
 }
 
+// immutable view of the stats
 type Snapshot struct {
 	Total     uint64  `json:"total"`
 	Hits      uint64  `json:"hits"`
@@ -61,6 +68,8 @@ type Snapshot struct {
 	Recent    []Query `json:"recent"`
 }
 
+// snapshot copies current stats so the caller
+// can read them without holding the lock
 func (s *Stats) Snapshot() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()

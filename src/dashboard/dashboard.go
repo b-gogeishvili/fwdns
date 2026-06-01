@@ -1,3 +1,4 @@
+// small monitoring dashboard for live monitoring and data visualization
 package dashboard
 
 import (
@@ -15,16 +16,23 @@ import (
 //go:embed assets
 var content embed.FS
 
+// bundles the things dashboard will need to read from
 type Server struct {
 	stats *stats.Stats
 	cache *cache.Cache
 }
 
+// constructor for server
 func New(s *stats.Stats, c *cache.Cache) *Server {
 	return &Server{stats: s, cache: c}
 }
 
+// returns HTTP routes
+//
+// GET /          -> dashboard HTML page
+// GET /api/stats -> current statistics as JSON
 func (srv *Server) Handler() http.Handler {
+	// serve files from embeded assets directory
 	assets, err := fs.Sub(content, "assets")
 	if err != nil {
 		panic(err)
@@ -36,6 +44,7 @@ func (srv *Server) Handler() http.Handler {
 	return mux
 }
 
+// returns the current statistics as JSON
 func (srv *Server) handleStats(w http.ResponseWriter, _ *http.Request) {
 	snap := srv.stats.Snapshot()
 	snap.CacheSize = srv.cache.Len()

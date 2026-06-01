@@ -1,3 +1,6 @@
+// contains core logic of the server: deciding, for
+// each request, wether to answer from cache or
+// forward it to an upstream DNS server
 package resolver
 
 import (
@@ -19,6 +22,7 @@ const (
 	statusFail lookupStatus = "FAIL"
 )
 
+// resolver implements dns.Handler
 type Resolver struct {
 	cache           *cache.Cache
 	stats           *stats.Stats
@@ -26,6 +30,7 @@ type Resolver struct {
 	client          *dns.Client // client for talking to upstreams
 }
 
+// constructor for resolver
 func New(c *cache.Cache, s *stats.Stats, upstreamServers []string, timeout time.Duration) *Resolver {
 	return &Resolver{
 		cache:           c,
@@ -35,9 +40,11 @@ func New(c *cache.Cache, s *stats.Stats, upstreamServers []string, timeout time.
 	}
 }
 
+// this is called once per incoming request
 func (r *Resolver) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	start := time.Now()
 
+	// DNS message can carry several messages.
 	if len(req.Question) == 0 {
 		_ = w.WriteMsg(tools.ErrorReply(req))
 		return
@@ -45,6 +52,7 @@ func (r *Resolver) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	q := req.Question[0]
 	key := cache.Key(q)
 
+	// cache lookup
 	if resp, ok := r.cache.Get(key); ok {
 		resp.Id = req.Id
 		resp.Question = req.Question
@@ -52,22 +60,30 @@ func (r *Resolver) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 		_ = w.WriteMsg(resp)
 		return
 	}
+
+	// cache missed, forward to an upstream server
 	resp, err := r.forward(req)
 	if err != nil || resp == nil {
 		r.record(q, statusFail, -1, start)
 		_ = w.WriteMsg(tools.ErrorReply(req))
 		return
 	}
+
+	// return error on failure
 	if resp.Rcode != dns.RcodeSuccess {
 		r.record(q, statusFail, -1, start)
 		_ = w.WriteMsg(resp)
 		return
 	}
+
+	// add entry to a cache
 	r.cache.Set(key, resp)
 	r.record(q, statusMiss, int(cache.MinTTL(resp)), start)
 	_ = w.WriteMsg(resp)
 }
 
+// forwards requests to each configured upstream in order
+// and turns first successful response
 func (r *Resolver) forward(req *dns.Msg) (*dns.Msg, error) {
 	var lastErr error
 	for _, up := range r.upstreamServers {
@@ -81,10 +97,12 @@ func (r *Resolver) forward(req *dns.Msg) (*dns.Msg, error) {
 	return nil, lastErr
 }
 
+// log each request to stats module. used for analysis
 func (r *Resolver) record(q dns.Question, status lookupStatus, ttl int, start time.Time) {
 	qtype := dns.TypeToString[q.Qtype]
 	latencyMs := float64(time.Since(start).Microseconds()) / 1000.0
 
+	// print requests in console
 	log.Printf("lookup  %-4s  %-32s  %-6s  ttl=%-6d  latency=%7.2fms",
 		status, q.Name, qtype, ttl, latencyMs)
 

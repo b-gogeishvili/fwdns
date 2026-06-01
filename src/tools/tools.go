@@ -1,3 +1,4 @@
+// provides helper functions
 package tools
 
 import (
@@ -6,6 +7,7 @@ import (
 	"github.com/miekg/dns"
 )
 
+// turn comma-separated IP addresses into a list
 func SplitUpstreams(servers string) []string {
 	var res []string
 	for _, addr := range strings.Split(servers, ",") {
@@ -13,6 +15,7 @@ func SplitUpstreams(servers string) []string {
 		if addr == "" {
 			continue
 		}
+		// must specify the port, otherwise requests will fail
 		if !strings.Contains(addr, ":") {
 			addr += ":53"
 		}
@@ -21,7 +24,7 @@ func SplitUpstreams(servers string) []string {
 	return res
 }
 
-// ErrorReply builds a SERVFAIL response for the given request.
+// builds a SERVFAIL response for the given request.
 func ErrorReply(req *dns.Msg) *dns.Msg {
 	m := new(dns.Msg)
 	m.SetRcode(req, dns.RcodeServerFailure)

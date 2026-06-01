@@ -1,3 +1,4 @@
+// implements a simple, in-memory, TTL-based cache
 package cache
 
 import (
@@ -8,26 +9,32 @@ import (
 	"github.com/miekg/dns"
 )
 
+// single cached DNS response
 type entry struct {
 	msg       *dns.Msg  // DNS response received from the upstream
 	expiresAt time.Time // expiry date of the entry
 }
 
+// stores DNS responses
 type Cache struct {
 	mu      sync.RWMutex // RWMutex is required to protect writes from multiple goroutines
 	entries map[string]entry
 }
 
+// constructor for cache
 func New() *Cache {
 	return &Cache{entries: make(map[string]entry)}
 }
 
+// builds a map key for DNS
+// e.g example.com|A|IN
 func Key(q dns.Question) string {
 	return strings.ToLower(q.Name) + "|" +
 		dns.TypeToString[q.Qtype] + "|" +
 		dns.ClassToString[q.Qclass]
 }
 
+// returns a cached response for a key
 func (c *Cache) Get(key string) (msg *dns.Msg, ok bool) {
 	c.mu.RLock()
 	e, found := c.entries[key]
@@ -50,6 +57,7 @@ func (c *Cache) Get(key string) (msg *dns.Msg, ok bool) {
 	return out, true
 }
 
+// set every record's TTL to seconds
 func rewriteTTL(records []dns.RR, ttl uint32) {
 	for _, rr := range records {
 		if _, isOPT := rr.(*dns.OPT); isOPT {
@@ -59,6 +67,7 @@ func rewriteTTL(records []dns.RR, ttl uint32) {
 	}
 }
 
+// stores a response under key
 func (c *Cache) Set(key string, msg *dns.Msg) {
 	ttl := MinTTL(msg)
 	if ttl == 0 {
@@ -72,6 +81,7 @@ func (c *Cache) Set(key string, msg *dns.Msg) {
 	c.mu.Unlock()
 }
 
+// returns smallest TTL among answer records
 func MinTTL(msg *dns.Msg) uint32 {
 	var min uint32
 	first := true
@@ -87,12 +97,14 @@ func MinTTL(msg *dns.Msg) uint32 {
 	return min
 }
 
+// returns number of currently stored entries
 func (c *Cache) Len() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.entries)
 }
 
+// removes expired entries
 func (c *Cache) DeleteExpired() int {
 	now := time.Now()
 	c.mu.Lock()
@@ -107,6 +119,7 @@ func (c *Cache) DeleteExpired() int {
 	return removed
 }
 
+// launch a goroutine that calls DeleteExpired every interval
 func (c *Cache) StartCleanup(interval time.Duration) (stop func()) {
 	ticker := time.NewTicker(interval)
 	done := make(chan struct{})

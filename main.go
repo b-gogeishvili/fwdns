@@ -1,3 +1,10 @@
+// fwdns is a small DNS proxy server.
+//
+// It listens for DNS queries and responds from cache if applicable,
+// otherwiese forwards them to an upstream server and caches result.
+//
+// In addition, it has a separate HTTP server that exposes
+// live monitoring dashboard for data visualisation and analysis.
 package main
 
 import (
@@ -20,6 +27,7 @@ import (
 )
 
 func main() {
+	// command line flags
 	dnsAddr := flag.String("dns", ":5300", "port to serve DNS on")
 	httpAddr := flag.String("http", ":8080", "port to serve HTTP on")
 	upstream := flag.String("upstream", "9.9.9.9,1.1.1.1", "upstream dns servers, separated by comma")
@@ -33,13 +41,14 @@ func main() {
 		log.Fatal("At least one upstream server is required")
 	}
 
-	c := cache.New()
-	s := stats.New(100)
+	c := cache.New()    // initialize cache
+	s := stats.New(500) // remember last 500 entries
 	res := resolver.New(c, s, upstreamServers, *timeout)
 
 	stopCleanup := c.StartCleanup(*cleanup)
 	defer stopCleanup()
 
+	// start DNS Server
 	dnsServer := &dns.Server{Addr: *dnsAddr, Net: "udp", Handler: res}
 	go func() {
 		log.Printf("DNS server is listening on %s (UDP); upstream servers: %s",
@@ -51,6 +60,7 @@ func main() {
 		}
 	}()
 
+	// start HTTP Server
 	webServer := &http.Server{Addr: *httpAddr, Handler: dashboard.New(s, c).Handler()}
 	go func() {
 		log.Printf("Web dashboard on http://localhost%s", *httpAddr)
@@ -59,6 +69,7 @@ func main() {
 		}
 	}()
 
+	// wait for CTRL+C Signal to shutdown the server
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan

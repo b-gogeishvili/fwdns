@@ -1,3 +1,4 @@
+// sanitize DNS query names to avoid any HTML injection
 const escapes = {
   "&": "&amp;",
   "<": "&lt;",
@@ -25,6 +26,7 @@ async function refresh() {
   set("hitRate", data.hitRate.toFixed(1) + "%");
   document.getElementById("hitBar").style.width = data.hitRate + "%";
 
+  // The server sends oldest queries first. Reverse so the newest are on top.
   document.getElementById("recent").innerHTML = (data.recent || [])
     .slice()
     .reverse()
