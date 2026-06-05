@@ -5,11 +5,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN make build
+RUN CGO_ENABLED=0 make build
 
 FROM busybox
-COPY --from=build /fwdns /fwdns
+COPY --from=build /src/fwdns /fwdns
 
 EXPOSE 53/udp 8080
 
-ENTRYPOINT ["/fwdns -dns :53"]
+ENTRYPOINT ["/fwdns", "-dns", ":53"]
