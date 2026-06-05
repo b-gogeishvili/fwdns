@@ -3,13 +3,16 @@
 
 BINARY := fwdns
 
-.PHONY: build run build-windows docker clean
+.PHONY: build run test build-windows docker clean
 
 build:
 	go build -o $(BINARY) .
 
 run: build
 	./$(BINARY)
+
+test:
+	go test ./...
 
 build-windows:
 	GOOS=windows GOARCH=amd64 go build -o $(BINARY).exe .
