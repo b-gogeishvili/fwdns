@@ -26,10 +26,8 @@ async function refresh() {
   set("hitRate", data.hitRate.toFixed(1) + "%");
   document.getElementById("hitBar").style.width = data.hitRate + "%";
 
-  // The server sends oldest queries first. Reverse so the newest are on top.
   document.getElementById("recent").innerHTML = (data.recent || [])
     .slice()
-    .reverse()
     .map((q) => {
       const time = new Date(q.time).toLocaleTimeString();
       const tag = q.cached
